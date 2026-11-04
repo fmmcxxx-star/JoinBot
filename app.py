@@ -1,14 +1,12 @@
-from quart import Quart, Response
+from quart import Quart, Response, request
 from pyrogram import Client
 import os
 
-# --- استخدام المفاتيح العامة الرسمية لتليجرام ---
 API_ID = 6
 API_HASH = "eb06d4abfb49dc3eeb1aeb98ae0f581e"
 
-# البيانات الخاصة بك
 BOT_TOKEN = "9001522987:AAFpViGI2y4kvXU32CpEJEB0QlKQ1IX9C0c"
-CHANNEL_ID = -1003963804386  # تم إضافة إشارة القناة -100 لتليجرام
+CHANNEL_ID = -1003963804386
 
 app = Quart(__name__)
 bot = None
@@ -21,10 +19,9 @@ async def start_bot():
         api_id=API_ID,
         api_hash=API_HASH,
         bot_token=BOT_TOKEN,
-        in_memory=True  # يمنع طلب تسجيل الدخول التفاعلي في Render
+        in_memory=True
     )
     await bot.start()
-    print("🤖 تم تشغيل سيرفر البث بنجاح")
 
 @app.after_serving
 async def stop_bot():
@@ -47,18 +44,35 @@ async def stream_video(message_id):
             return "الفيديو غير موجود في القناة", 404
 
         file_size = message.video.file_size
+        range_header = request.headers.get('Range', None)
 
-        async def generate_chunks():
-            async for chunk in bot.stream_media(message, limit=0):
-                yield chunk
+        if range_header:
+            # استخراج بداية ونهاية البايتات المطلوبة من المتصفح
+            byte_offset = int(range_header.replace('bytes=', '').split('-')[0])
+            length = file_size - byte_offset
 
-        headers = {
-            "Content-Type": "video/mp4",
-            "Content-Length": str(file_size),
-            "Accept-Ranges": "bytes"
-        }
-        
-        return Response(generate_chunks(), headers=headers)
+            async def generate_chunks():
+                async for chunk in bot.stream_media(message, offset=byte_offset, limit=0):
+                    yield chunk
+
+            headers = {
+                "Content-Type": "video/mp4",
+                "Content-Range": f"bytes {byte_offset}-{file_size - 1}/{file_size}",
+                "Content-Length": str(length),
+                "Accept-Ranges": "bytes"
+            }
+            return Response(generate_chunks(), status=206, headers=headers)
+        else:
+            async def generate_chunks():
+                async for chunk in bot.stream_media(message, limit=0):
+                    yield chunk
+
+            headers = {
+                "Content-Type": "video/mp4",
+                "Content-Length": str(file_size),
+                "Accept-Ranges": "bytes"
+            }
+            return Response(generate_chunks(), headers=headers)
 
     except Exception as e:
         return f"حدث خطأ أثناء نقل البث: {str(e)}", 500
