@@ -2,13 +2,13 @@ from quart import Quart, Response
 from pyrogram import Client
 import os
 
-# --- البيانات الأساسية لمشروع البث ---
+# --- استخدام المفاتيح العامة لتليجرام ---
 API_ID = 6
 API_HASH = "eb06d4abfb49dc3eeb1aeb98ae0f581e"
 
-# أضف التوكن الجديد وأيدي قناتك هنا، أو اتركها تسحب تلقائياً من Environment Variables على Render
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "9001522987:AAFpViGI2y4kvXU32CpEJEB0QlKQ1IX9C0c")
-CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-1000000000000"))
+# سحب البيانات أماناً من Environment Variables في Render
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "0"))
 
 app = Quart(__name__)
 bot = Client("stream_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
@@ -22,11 +22,11 @@ async def start_bot():
 async def stop_bot():
     await bot.stop()
 
-@app.route( / )
+@app.route('/')
 async def home():
     return "سيرفر البث يعمل بنجاح! 🚀"
 
-@app.route( /stream/<int:message_id> )
+@app.route('/stream/<int:message_id>')
 async def stream_video(message_id):
     try:
         message = await bot.get_messages(CHANNEL_ID, message_id)
@@ -50,5 +50,5 @@ async def stream_video(message_id):
     except Exception as e:
         return f"حدث خطأ أثناء نقل البث: {str(e)}", 500
 
-if __name__ ==  __main__ :
-    app.run(host= 0.0.0.0 , port=5000)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
