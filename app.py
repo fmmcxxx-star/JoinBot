@@ -2,23 +2,27 @@ from quart import Quart, Response
 from pyrogram import Client
 import os
 
-# --- استخدام المفاتيح العامة لتليجرام ---
+# --- استخدام المفاتيح العامة الرسمية لتليجرام ---
 API_ID = 6
 API_HASH = "eb06d4abfb49dc3eeb1aeb98ae0f581e"
 
-# سحب البيانات أماناً من Environment Variables في Render
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
-CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "0"))
+# البيانات الخاصة بك
+BOT_TOKEN = "9001522987:AAFpViGI2y4kvXU32CpEJEB0QlKQ1IX9C0c"
+CHANNEL_ID = -1003963804386  # تم إضافة إشارة القناة -100 لتليجرام
 
 app = Quart(__name__)
-
-# تعريف متغير البوت
 bot = None
 
 @app.before_serving
 async def start_bot():
     global bot
-    bot = Client("stream_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+    bot = Client(
+        "stream_bot_session",
+        api_id=API_ID,
+        api_hash=API_HASH,
+        bot_token=BOT_TOKEN,
+        in_memory=True  # يمنع طلب تسجيل الدخول التفاعلي في Render
+    )
     await bot.start()
     print("🤖 تم تشغيل سيرفر البث بنجاح")
 
