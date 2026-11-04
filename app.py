@@ -1,0 +1,54 @@
+from quart import Quart, Response
+from pyrogram import Client
+import os
+
+# --- البيانات الأساسية لمشروع البث ---
+API_ID = 6
+API_HASH = "eb06d4abfb49dc3eeb1aeb98ae0f581e"
+
+# أضف التوكن الجديد وأيدي قناتك هنا، أو اتركها تسحب تلقائياً من Environment Variables على Render
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "9001522987:AAFpViGI2y4kvXU32CpEJEB0QlKQ1IX9C0c")
+CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-1000000000000"))
+
+app = Quart(__name__)
+bot = Client("stream_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+
+@app.before_serving
+async def start_bot():
+    await bot.start()
+    print("🤖 تم تشغيل سيرفر البث بنجاح")
+
+@app.after_serving
+async def stop_bot():
+    await bot.stop()
+
+@app.route( / )
+async def home():
+    return "سيرفر البث يعمل بنجاح! 🚀"
+
+@app.route( /stream/<int:message_id> )
+async def stream_video(message_id):
+    try:
+        message = await bot.get_messages(CHANNEL_ID, message_id)
+        if not message or not message.video:
+            return "الفيديو غير موجود في القناة", 404
+
+        file_size = message.video.file_size
+
+        async def generate_chunks():
+            async for chunk in bot.stream_media(message, limit=0):
+                yield chunk
+
+        headers = {
+            "Content-Type": "video/mp4",
+            "Content-Length": str(file_size),
+            "Accept-Ranges": "bytes"
+        }
+        
+        return Response(generate_chunks(), headers=headers)
+
+    except Exception as e:
+        return f"حدث خطأ أثناء نقل البث: {str(e)}", 500
+
+if __name__ ==  __main__ :
+    app.run(host= 0.0.0.0 , port=5000)
