@@ -11,16 +11,22 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "0"))
 
 app = Quart(__name__)
-bot = Client("stream_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+
+# تعريف متغير البوت
+bot = None
 
 @app.before_serving
 async def start_bot():
+    global bot
+    bot = Client("stream_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
     await bot.start()
     print("🤖 تم تشغيل سيرفر البث بنجاح")
 
 @app.after_serving
 async def stop_bot():
-    await bot.stop()
+    global bot
+    if bot:
+        await bot.stop()
 
 @app.route('/')
 async def home():
@@ -29,6 +35,9 @@ async def home():
 @app.route('/stream/<int:message_id>')
 async def stream_video(message_id):
     try:
+        if not bot:
+            return "السيرفر غير جاهز بعد", 500
+
         message = await bot.get_messages(CHANNEL_ID, message_id)
         if not message or not message.video:
             return "الفيديو غير موجود في القناة", 404
